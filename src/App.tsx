@@ -25,10 +25,13 @@ export default function App() {
 
   const apiFolder = useCallback((f: Folder) => f === 'inbox' ? 'INBOX' : f.toUpperCase(), []);
 
+  const API_BASE = (import.meta.env.VITE_API_BASE as string) || '';
+  const api = (path: string) => `${API_BASE}${path}`;
+
   const fetchEmails = useCallback(async (folder: Folder) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/emails?folder=${apiFolder(folder)}`, { credentials: 'include' });
+      const res = await fetch(api(`/api/emails?folder=${apiFolder(folder)}`), { credentials: 'include' });
       const data = await res.json();
       if (res.ok) {
         const mapped = (data.emails || []).map((m: any) => ({
@@ -64,7 +67,7 @@ export default function App() {
 
   // Check session on mount
   useEffect(() => {
-    fetch('/api/status', { credentials: 'include' })
+    fetch(api('/api/status'), { credentials: 'include' })
       .then(r => r.json())
       .then(data => {
         if (data.authenticated) {
