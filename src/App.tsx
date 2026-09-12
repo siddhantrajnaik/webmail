@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import EmailList from './components/EmailList';
 import EmailDetail from './components/EmailDetail';
@@ -53,6 +53,14 @@ export default function App() {
       setLoading(false);
     }
   }, [apiFolder]);
+
+  const emailsRef = useRef(emails);
+  emailsRef.current = emails;
+
+  const handleSelectEmail = useCallback((id: string) => {
+    const found = emailsRef.current.find(e => e.id === id);
+    if (found) setSelectedEmail(found);
+  }, []);
 
   // Check session on mount
   useEffect(() => {
@@ -109,7 +117,7 @@ export default function App() {
       <EmailList
         emails={emails}
         activeId={selectedEmail?.id ?? null}
-        onSelect={setSelectedEmail}
+        onSelect={handleSelectEmail}
         loading={loading}
       />
       {selectedEmail ? (
