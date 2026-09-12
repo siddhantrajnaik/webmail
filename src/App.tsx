@@ -25,8 +25,7 @@ export default function App() {
 
   const apiFolder = useCallback((f: Folder) => f === 'inbox' ? 'INBOX' : f.toUpperCase(), []);
 
-  const API_BASE = (import.meta.env.VITE_API_BASE as string) || '';
-  const api = (path: string) => `${API_BASE}${path}`;
+  const api = (path: string) => path;
 
   const fetchEmails = useCallback(async (folder: Folder) => {
     setLoading(true);
