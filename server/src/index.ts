@@ -8,7 +8,7 @@ import { MailClient, createSmtpTransporter } from './mail/imap.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001');
-const FRONTEND_DIST = join(__dirname, '..', '..', '..', '..', 'dist');
+const FRONTEND_DIST = join(__dirname, '..', '..', 'dist');
 
 // ponytail: in-memory session store, fine for single-user desktop app
 const connections = new Map<string, MailClient>();
