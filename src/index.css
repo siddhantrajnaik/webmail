@@ -98,3 +98,8 @@ html, body, #root {
   border-radius: 0.75rem;
   box-shadow: var(--shadow-hard);
 }
+
+/* Font utilities */
+.font-headline { font-family: var(--font-headline); }
+.font-body { font-family: var(--font-body); }
+.font-code { font-family: var(--font-code); }
