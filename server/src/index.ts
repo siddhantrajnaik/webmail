@@ -78,6 +78,12 @@ app.use('/api', async (req, res, next) => {
 // ponytail: serve static frontend from root dist/
 app.use(express.static(FRONTEND_DIST));
 
+// No-cache for HTML so stale SPA shells don't stick
+app.get('*.html', (req, res, next) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  next();
+});
+
 app.get('/api/folders', async (req, res) => {
   try {
     const client = getClient(req);
