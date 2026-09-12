@@ -2,11 +2,13 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vite'
 
+const API_BASE = (import.meta.env.VITE_API_BASE as string) || 'http://localhost:3001';
+
 export default defineConfig({
   base: '/webmail/',
   server: {
     proxy: {
-      '/api': 'http://localhost:3001',
+      '/api': API_BASE,
     },
   },
   plugins: [react(), VitePWA({

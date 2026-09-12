@@ -11,7 +11,9 @@ const connections = new Map<string, MailClient>();
 // ponytail: store passwords per session for SMTP send
 const passwords = new Map<string, string>();
 
-app.use(cors({ origin: true, credentials: true }));
+const corsOrigin = process.env.CORS_ORIGIN || true;
+
+app.use(cors({ origin: corsOrigin, credentials: true }));
 app.use(express.json());
 
 app.use(session({
@@ -27,42 +29,50 @@ app.use(session({
   },
 }));
 
-app.post('/api/login', async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password required' });
+app.use('/api', async (req, res, next) => {
+  // API routes
+  if (req.method === 'POST' && req.path === '/login') {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password required' });
+    }
+    try {
+      const client = new MailClient({
+        user: `${username}@iitd.ac.in`,
+        password,
+      });
+      await client.connect();
+      (req.session as any).user = username;
+      (req.session as any).connected = true;
+      connections.set(username, client);
+      passwords.set(username, password);
+      res.json({ success: true, user: username });
+    } catch (err: any) {
+      res.status(401).json({ error: `Authentication failed: ${err.message}` });
+    }
+    return;
   }
-  try {
-    const client = new MailClient({
-      user: `${username}@iitd.ac.in`,
-      password,
-    });
-    await client.connect();
-    (req.session as any).user = username;
-    (req.session as any).connected = true;
-    connections.set(username, client);
-    passwords.set(username, password);
-    res.json({ success: true, user: username });
-  } catch (err: any) {
-    res.status(401).json({ error: `Authentication failed: ${err.message}` });
+  if (req.method === 'POST' && req.path === '/logout') {
+    const username = (req.session as any).user;
+    if (username && connections.has(username)) {
+      const client = connections.get(username)!;
+      await client.disconnect().catch(() => {});
+      connections.delete(username);
+      passwords.delete(username);
+    }
+    req.session.destroy(() => {});
+    res.json({ success: true });
+    return;
   }
+  if (req.method === 'GET' && req.path === '/status') {
+    res.json({ authenticated: !!(req.session as any).connected });
+    return;
+  }
+  next();
 });
 
-app.post('/api/logout', async (req, res) => {
-  const username = (req.session as any).user;
-  if (username && connections.has(username)) {
-    const client = connections.get(username)!;
-    await client.disconnect().catch(() => {});
-    connections.delete(username);
-    passwords.delete(username);
-  }
-  req.session.destroy(() => {});
-  res.json({ success: true });
-});
-
-app.get('/api/status', (req, res) => {
-  res.json({ authenticated: !!(req.session as any).connected });
-});
+// ponytail: serve static frontend if built
+app.use(express.static('dist/public'));
 
 app.get('/api/folders', async (req, res) => {
   try {
@@ -108,6 +118,11 @@ app.post('/api/send', async (req, res) => {
   }
 });
 
+// SPA fallback
+app.get('*', (req, res) => {
+  res.sendFile('dist/public/index.html', { root: '.' });
+});
+
 function getClient(req: any): MailClient {
   const username = req.session.user;
   if (!username || !connections.has(username)) {
@@ -119,3 +134,4 @@ function getClient(req: any): MailClient {
 app.listen(PORT, () => {
   console.log(`Mail server running on port ${PORT}`);
 });
+
