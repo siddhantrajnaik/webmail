@@ -3,7 +3,8 @@
   "configurations": [
     {
       "name": "webmail-render",
-      "url": "https://webmail-1.onrender.com"
+      "url": "https://webmail-1.onrender.com",
+      "autoPort": true
     }
   ]
 }

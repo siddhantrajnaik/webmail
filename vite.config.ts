@@ -5,7 +5,7 @@ import { defineConfig } from 'vite'
 const API_BASE = process.env.VITE_API_BASE || 'http://localhost:3001';
 
 export default defineConfig({
-  base: '/webmail/',
+  base: '/',
   server: {
     proxy: {
       '/api': API_BASE,
@@ -25,8 +25,8 @@ export default defineConfig({
       background_color: '#FAF6F0',
       display: 'standalone',
       orientation: 'any',
-      scope: '/webmail/',
-      start_url: '/webmail/',
+      scope: '/',
+      start_url: '/',
       icons: [
         {
           src: 'pwa-192x192.png',

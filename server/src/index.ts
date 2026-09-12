@@ -1,10 +1,14 @@
 import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { MailClient, createSmtpTransporter } from './mail/imap.js';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001');
+const FRONTEND_DIST = join(__dirname, '..', '..', '..', '..', 'dist');
 
 // ponytail: in-memory session store, fine for single-user desktop app
 const connections = new Map<string, MailClient>();
@@ -72,7 +76,7 @@ app.use('/api', async (req, res, next) => {
 });
 
 // ponytail: serve static frontend from root dist/
-app.use(express.static('dist'));
+app.use(express.static(FRONTEND_DIST));
 
 app.get('/api/folders', async (req, res) => {
   try {
@@ -120,7 +124,7 @@ app.post('/api/send', async (req, res) => {
 
 // SPA fallback
 app.get('*', (req, res) => {
-  res.sendFile('dist/index.html');
+  res.sendFile(join(FRONTEND_DIST, 'index.html'));
 });
 
 function getClient(req: any): MailClient {
