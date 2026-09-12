@@ -12,7 +12,6 @@ export interface ImapCredentials {
   password: string;
 }
 
-// ponytail: imapflow v1 types are incomplete, use any cast
 const Flow: any = ImapFlow;
 
 export class MailClient {
@@ -20,19 +19,21 @@ export class MailClient {
 
   constructor(private creds: ImapCredentials) {}
 
-  async connect() {
+  async connect(timeoutMs = 15000) {
     this.client = new Flow({
       host: IITD_IMAP.host,
       port: IITD_IMAP.port,
       secure: IITD_IMAP.secure,
       auth: { user: this.creds.user, pass: this.creds.password },
+      connectTimeout: timeoutMs,
+      greetTimeout: timeoutMs,
     });
     await this.client.connect();
   }
 
   async disconnect() {
     if (this.client) {
-      await this.client.logout();
+      try { await this.client.logout(); } catch {}
       this.client = null;
     }
   }
@@ -49,23 +50,44 @@ export class MailClient {
     try {
       const status = await this.client.status(folder, { messages: true });
       const count = status.messages ?? 0;
+      if (count === 0) return [];
       const seqStart = Math.max(1, count - limit + 1);
       const mails: any[] = [];
-      for await (const msg of this.client.fetch(`${seqStart}:${count}`, { envelope: true, flags: true, bodyParts: ['1'] }, { uid: true })) {
+      for await (const msg of this.client.fetch(`${seqStart}:${count}`, { envelope: true, flags: true }, { uid: true })) {
         const env = msg.envelope;
         if (!env) continue;
-        const fromArr = env.from as Array<{ address?: string }> | undefined;
-        const text = msg.bodyParts?.get('1');
+        const fromArr = env.from as Array<{ address?: string; name?: string }> | undefined;
         mails.push({
           uid: msg.uid,
-          from: fromArr?.length ? (fromArr[0].address || '') : '',
+          from: fromArr?.length ? (fromArr[0].name || fromArr[0].address || '') : '',
+          fromEmail: fromArr?.length ? (fromArr[0].address || '') : '',
           subject: env.subject || '(no subject)',
           date: env.date || new Date(),
-          text: text ? text.toString('utf-8') : '',
+          text: '', // body fetched lazily
           flags: Array.from(msg.flags ?? []),
         });
       }
       return mails;
+    } finally {
+      await this.client.mailboxClose();
+    }
+  }
+
+  async fetchMessageBody(folder: string, uid: number): Promise<string> {
+    if (!this.client) throw new Error('Not connected');
+    await this.client.mailboxOpen(folder, { readOnly: true });
+    try {
+      const msg = await this.client.fetchOne(uid, { bodyParts: ['1'] }, { uid: true, source: true });
+      const text = msg.source?.toString('utf-8');
+      // Strip headers to get plain text body
+      if (text) {
+        const lines = text.split('\n');
+        const bodyStart = lines.findIndex((l: string) => l.trim() === '');
+        if (bodyStart >= 0) {
+          return lines.slice(bodyStart + 1).join('\n').trim();
+        }
+      }
+      return text || '';
     } finally {
       await this.client.mailboxClose();
     }

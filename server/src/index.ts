@@ -106,6 +106,18 @@ app.get('/api/emails', async (req, res) => {
   }
 });
 
+app.get('/api/emails/:uid/body', async (req, res) => {
+  try {
+    const client = getClient(req);
+    const folder = (req.query.folder as string) || 'INBOX';
+    const uid = parseInt(req.params.uid);
+    const text = await client.fetchMessageBody(folder, uid);
+    res.json({ body: text });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/send', async (req, res) => {
   try {
     const { to, subject, body } = req.body;

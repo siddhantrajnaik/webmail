@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import type { Email } from '../data/types';
 
 interface EmailDetailProps {
@@ -6,6 +7,19 @@ interface EmailDetailProps {
 }
 
 export default function EmailDetail({ email, onBack }: EmailDetailProps) {
+  const [body, setBody] = useState(email.body);
+  const [loadingBody, setLoadingBody] = useState(false);
+
+  useEffect(() => {
+    setBody(email.body);
+    if (email.body) return;
+    setLoadingBody(true);
+    fetch(`/api/emails/${email.id}/body?folder=${email.folder === 'inbox' ? 'INBOX' : email.folder.toUpperCase()}`, { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => { setBody(d.body || '(no content)'); })
+      .catch(() => setBody('(failed to load)'))
+      .finally(() => setLoadingBody(false));
+  }, [email.id, email.folder, email.body]);
   return (
     <div className="flex flex-col h-full bg-[#FAF6F0]">
       {/* Toolbar */}
@@ -67,11 +81,15 @@ export default function EmailDetail({ email, onBack }: EmailDetailProps) {
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto p-5">
-        {email.body.split('\n').map((line, i) => (
-          <p key={i} className="font-body text-[14px] leading-[22px] text-[#1b1b1e] whitespace-pre-line mb-1">
-            {line}
-          </p>
-        ))}
+        {loadingBody ? (
+          <div className="flex items-center justify-center py-12">
+            <span className="material-symbols-outlined text-[32px] text-[#dcd9dd] animate-spin">progress_activity</span>
+          </div>
+        ) : (
+          body.split('\n').map((line, i) => (
+            <p key={i} className="font-body text-[14px] leading-[22px] text-[#1b1b1e] whitespace-pre-line mb-1">{line}</p>
+          ))
+        )}
 
         {/* Attachment */}
         {email.hasAttachment && (
