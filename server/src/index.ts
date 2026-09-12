@@ -4,11 +4,12 @@ import session from 'express-session';
 import { MailClient, createSmtpTransporter } from './mail/imap.js';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = parseInt(process.env.PORT || '3001');
 
-// In-memory session store (ponytail: single-user desktop app, replace with Redis if needed)
-// ponytail: per-user IMAP connections, global Map is fine for <50 users
+// ponytail: in-memory session store, fine for single-user desktop app
 const connections = new Map<string, MailClient>();
+// ponytail: store passwords per session for SMTP send
+const passwords = new Map<string, string>();
 
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
@@ -26,23 +27,21 @@ app.use(session({
   },
 }));
 
-// --- Auth ---
-
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password required' });
   }
-
   try {
     const client = new MailClient({
       user: `${username}@iitd.ac.in`,
       password,
     });
     await client.connect();
-    req.session.user = username;
-    req.session.connected = true;
+    (req.session as any).user = username;
+    (req.session as any).connected = true;
     connections.set(username, client);
+    passwords.set(username, password);
     res.json({ success: true, user: username });
   } catch (err: any) {
     res.status(401).json({ error: `Authentication failed: ${err.message}` });
@@ -50,11 +49,12 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.post('/api/logout', async (req, res) => {
-  const username = req.session.user as string | undefined;
+  const username = (req.session as any).user;
   if (username && connections.has(username)) {
     const client = connections.get(username)!;
     await client.disconnect().catch(() => {});
     connections.delete(username);
+    passwords.delete(username);
   }
   req.session.destroy(() => {});
   res.json({ success: true });
@@ -64,34 +64,26 @@ app.get('/api/status', (req, res) => {
   res.json({ authenticated: !!(req.session as any).connected });
 });
 
-// --- Folders ---
-
 app.get('/api/folders', async (req, res) => {
   try {
     const client = getClient(req);
-    const folders = await client.listFolders();
+    const folders = await client.listMailboxes();
     res.json({ folders });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// --- Emails ---
-
 app.get('/api/emails', async (req, res) => {
   try {
     const client = getClient(req);
-    const folder = (req.query.folder as string) || 'INBOX';
     const limit = parseInt((req.query.limit as string) || '50');
-    const offset = parseInt((req.query.offset as string) || '0');
-    const mails = await client.fetchEmails(folder, limit, offset);
+    const mails = await client.fetchMessages(limit);
     res.json({ emails: mails });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
-
-// --- Send ---
 
 app.post('/api/send', async (req, res) => {
   try {
@@ -99,11 +91,13 @@ app.post('/api/send', async (req, res) => {
     if (!to || !subject || !body) {
       return res.status(400).json({ error: 'to, subject, and body required' });
     }
-    const creds = { user: (req.session.user as string) + '@iitd.ac.in', password: '' };
-    // Use SMTP transporter for sending
-    const transporter = createSmtpTransporter(creds);
+    const username = (req.session as any).user as string;
+    const password = passwords.get(username);
+    if (!password) return res.status(401).json({ error: 'Session expired' });
+
+    const transporter = createSmtpTransporter({ user: `${username}@iitd.ac.in`, password });
     await transporter.sendMail({
-      from: `${req.session.user}@iitd.ac.in`,
+      from: `${username}@iitd.ac.in`,
       to,
       subject,
       text: body,
@@ -114,8 +108,6 @@ app.post('/api/send', async (req, res) => {
   }
 });
 
-// --- Helpers ---
-
 function getClient(req: any): MailClient {
   const username = req.session.user;
   if (!username || !connections.has(username)) {
@@ -125,5 +117,5 @@ function getClient(req: any): MailClient {
 }
 
 app.listen(PORT, () => {
-  console.log(`Mail server running on http://localhost:${PORT}`);
+  console.log(`Mail server running on port ${PORT}`);
 });

@@ -1,13 +1,5 @@
 import { ImapFlow } from 'imapflow';
-import type { ImapFlowOptions } from 'imapflow';
-
-export interface ImapCredentials {
-  user: string;
-  password: string;
-  host?: string;
-  port?: number;
-  secure?: boolean;
-}
+import nodemailer from 'nodemailer';
 
 const IITD_IMAP = {
   host: 'mailstore.iitd.ac.in',
@@ -15,19 +7,26 @@ const IITD_IMAP = {
   secure: true,
 };
 
-export class MailClient {
-  private client: ImapFlow | null = null;
-  private creds: ImapCredentials;
+export interface ImapCredentials {
+  user: string;
+  password: string;
+}
 
-  constructor(creds: ImapCredentials) {
-    this.creds = {
-      ...IITD_IMAP,
-      ...creds,
-    };
-  }
+// ponytail: imapflow v1 types are incomplete, use any cast
+const Flow: any = ImapFlow;
+
+export class MailClient {
+  private client: any = null;
+
+  constructor(private creds: ImapCredentials) {}
 
   async connect() {
-    this.client = new ImapFlow(this.creds);
+    this.client = new Flow({
+      host: IITD_IMAP.host,
+      port: IITD_IMAP.port,
+      secure: IITD_IMAP.secure,
+      auth: { user: this.creds.user, pass: this.creds.password },
+    });
     await this.client.connect();
   }
 
@@ -38,57 +37,40 @@ export class MailClient {
     }
   }
 
-  async listFolders() {
+  async listMailboxes(): Promise<string[]> {
     if (!this.client) throw new Error('Not connected');
-    const folders: string[] = [];
-    for await (const mailbox of this.client.listMailboxes()) {
-      folders.push(mailbox.name);
-    }
-    return folders;
+    const mbs = await this.client.list();
+    return mbs.map((mb: any) => mb.path);
   }
 
-  async fetchEmails(folder: string = 'INBOX', limit = 50, offset = 0) {
+  async fetchMessages(limit = 50): Promise<any[]> {
     if (!this.client) throw new Error('Not connected');
-    const lock = await this.client.getMailboxLock(folder);
+    await this.client.mailboxOpen('INBOX', { readOnly: true });
     try {
+      const status = await this.client.status('INBOX', { messages: true });
+      const count = status.messages ?? 0;
+      const seqStart = Math.max(1, count - limit + 1);
       const mails: any[] = [];
-      const uids = await this.client.search('ALL', { uid: true });
-      const page = uids.slice(-(offset + limit), uids.length - offset);
-      for (const uid of page.reverse()) {
-        const mail = await this.client.download(uid, { uid: true });
+      for await (const msg of this.client.fetch(`${seqStart}:${count}`, { envelope: true, flags: true, bodyParts: ['1'] }, { uid: true })) {
+        const env = msg.envelope;
+        if (!env) continue;
+        const fromArr = env.from as Array<{ address?: string }> | undefined;
+        const text = msg.bodyParts?.get('1');
         mails.push({
-          uid: mail.uid,
-          from: mail.from?.text || '',
-          to: mail.to?.text || '',
-          subject: mail.subject || '(no subject)',
-          date: mail.date,
-          text: await mail.getText(),
-          flags: await mail.flags.get(),
+          uid: msg.uid,
+          from: fromArr?.length ? (fromArr[0].address || '') : '',
+          subject: env.subject || '(no subject)',
+          date: env.date || new Date(),
+          text: text ? text.toString('utf-8') : '',
+          flags: Array.from(msg.flags ?? []),
         });
       }
       return mails;
     } finally {
-      lock.release();
+      await this.client.mailboxClose();
     }
   }
-
-  async sendEmail(to: string, subject: string, body: string) {
-    if (!this.client) throw new Error('Not connected');
-    const creds = this.creds;
-    await this.client.mailBox('Sent', { create: true });
-    const msg = `From: ${creds.user}
-To: ${to}
-Subject: ${subject}
-Content-Type: text/plain; charset=utf-8
-
-${body}`;
-    await this.client.append(msg, { flags: ['\\Seen'], uid: true });
-    return { success: true };
-  }
 }
-
-// SMTP for sending (separate from IMAP)
-import nodemailer from 'nodemailer';
 
 export function createSmtpTransporter(creds: ImapCredentials) {
   return nodemailer.createTransport({
