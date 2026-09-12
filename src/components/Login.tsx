@@ -1,5 +1,8 @@
 import { useState } from 'react';
 
+const API_BASE = (import.meta.env.VITE_API_BASE as string) || '';
+const api = (path: string) => `${API_BASE}${path}`;
+
 interface LoginProps {
   onLogin: () => void;
 }
@@ -17,7 +20,7 @@ export default function Login({ onLogin }: LoginProps) {
     const password = (form.elements.namedItem('password') as HTMLInputElement).value;
 
     try {
-      const res = await fetch('/api/login', {
+      const res = await fetch(api('/api/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
