@@ -67,13 +67,11 @@ export default function EmailDetail({ email, onBack }: EmailDetailProps) {
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto p-5">
-        <div className="prose prose-sm max-w-none">
-          {email.body.split('\n').map((line, i) => (
-            <p key={i} className="font-body text-[14px] leading-[22px] text-[#1b1b1e] whitespace-pre-line">
-              {line}
-            </p>
-          ))}
-        </div>
+        {email.body.split('\n').map((line, i) => (
+          <p key={i} className="font-body text-[14px] leading-[22px] text-[#1b1b1e] whitespace-pre-line mb-1">
+            {line}
+          </p>
+        ))}
 
         {/* Attachment */}
         {email.hasAttachment && (
