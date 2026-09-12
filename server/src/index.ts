@@ -71,8 +71,8 @@ app.use('/api', async (req, res, next) => {
   next();
 });
 
-// ponytail: serve static frontend if built
-app.use(express.static('dist/public'));
+// ponytail: serve static frontend from root dist/
+app.use(express.static('dist'));
 
 app.get('/api/folders', async (req, res) => {
   try {
@@ -120,7 +120,7 @@ app.post('/api/send', async (req, res) => {
 
 // SPA fallback
 app.get('*', (req, res) => {
-  res.sendFile('dist/public/index.html', { root: '.' });
+  res.sendFile('dist/index.html');
 });
 
 function getClient(req: any): MailClient {

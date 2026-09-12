@@ -3,7 +3,7 @@ services:
     name: iitd-mail-api
     runtime: node
     plan: free
-    buildCommand: npm run build && cd server && npm install && npm run build && cp -r ../dist dist/public
+    buildCommand: npm run build && cd server && npm install && npm run build
     startCommand: node server/dist/index.js
     envVars:
       - key: NODE_ENV
