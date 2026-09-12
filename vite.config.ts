@@ -18,8 +18,8 @@ export default defineConfig({
     registerType: 'autoUpdate',
     includeAssets: ['favicon.svg', 'robots.txt', 'apple-touch-icon.png'],
     manifest: {
-      name: 'IIT Delhi Webmail',
-      short_name: 'IITD Mail',
+      name: 'IIT Delhi Webmail v2',
+      short_name: 'IITD Mail v2',
       description: 'Institutional email client for IIT Delhi',
       theme_color: '#FAF6F0',
       background_color: '#FAF6F0',
