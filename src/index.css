@@ -1,69 +1,49 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Space+Grotesk:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
 
-:root {
-  /* Surfaces */
-  --cream: #FAF6F0;
-  --white: #ffffff;
-  --surface-dim: #dcd9dd;
-  --surface-container-low: #f6f2f7;
-  --surface-container: #f0edf1;
-  --surface-container-high: #eae7eb;
+@theme {
+  --color-cream: #FAF6F0;
+  --color-white: #ffffff;
+  --color-surface-dim: #dcd9dd;
+  --color-surface-container-low: #f6f2f7;
+  --color-surface-container: #f0edf1;
+  --color-surface-container-high: #eae7eb;
+  --color-orange: #FF5722;
+  --color-yellow: #FFD233;
+  --color-teal: #2DD4BF;
+  --color-blue: #3B82F6;
+  --color-pink: #FF7597;
+  --color-black: #18181B;
+  --color-ink: #1b1b1e;
+  --color-muted: #52525B;
 
-  /* Brand */
-  --orange: #FF5722;
-  --yellow: #FFD233;
-  --teal: #2DD4BF;
-  --blue: #3B82F6;
-  --pink: #FF7597;
-
-  /* Neutrals */
-  --black: #18181B;
-  --ink: #1b1b1e;
-  --muted: #52525B;
-
-  /* Typography */
   --font-headline: 'Space Grotesk', sans-serif;
   --font-body: 'Work Sans', sans-serif;
   --font-code: 'JetBrains Mono', monospace;
 
-  /* Sizing */
-  --border: 2.5px;
-  --shadow: 4px 4px 0px #18181B;
-  --shadow-lg: 8px 8px 0px #18181B;
-  --shadow-sm: 2px 2px 0px #18181B;
-  --radius: 0.75rem;
+  --shadow-hard: 4px 4px 0px #18181B;
+  --shadow-hard-lg: 8px 8px 0px #18181B;
+  --shadow-hard-sm: 2px 2px 0px #18181B;
   --radius-pill: 9999px;
-  --sidebar-w: 220px;
-  --list-w: 380px;
-  --detail-min: 0px;
 }
 
-* { box-sizing: border-box; }
 html, body, #root {
   margin: 0; padding: 0;
   width: 100%; height: 100%;
-  background: var(--cream);
-  color: var(--ink);
+  background: var(--color-cream);
+  color: var(--color-ink);
   font-family: var(--font-body);
   overflow: hidden;
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--surface-dim); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--color-surface-dim); border-radius: 3px; }
 
-/* Hard shadows */
-.shadow { box-shadow: var(--shadow); }
-.shadow-lg { box-shadow: var(--shadow-lg); }
-.shadow-sm { box-shadow: var(--shadow-sm); }
-
-/* Neobrutalist inputs */
 .neo-input {
-  background: var(--white);
-  border: var(--border) solid var(--black);
+  background: var(--color-white);
+  border: 2.5px solid var(--color-black);
   border-radius: 10px;
-  box-shadow: 3px 3px 0px var(--black);
+  box-shadow: 3px 3px 0px var(--color-black);
   padding: 10px 14px;
   font-family: var(--font-body);
   font-size: 14px;
@@ -71,53 +51,50 @@ html, body, #root {
   transition: box-shadow 0.1s;
 }
 .neo-input:focus {
-  box-shadow: 5px 5px 0px var(--black);
+  box-shadow: 5px 5px 0px var(--color-black);
 }
 
-/* Primary button */
 .neo-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   padding: 10px 20px;
-  border: var(--border) solid var(--black);
+  border: 2.5px solid var(--color-black);
   border-radius: var(--radius-pill);
-  background: var(--orange);
-  color: var(--white);
+  background: var(--color-orange);
+  color: var(--color-white);
   font-family: var(--font-headline);
   font-weight: 700; font-size: 13px;
   text-transform: uppercase; letter-spacing: 0.05em;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-hard);
   cursor: pointer;
   transition: transform 0.05s, box-shadow 0.05s;
 }
-.neo-btn:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0px var(--black); }
-.neo-btn:active { transform: translate(3px, 3px); box-shadow: 0px 0px 0px var(--black); }
+.neo-btn:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0px var(--color-black); }
+.neo-btn:active { transform: translate(3px, 3px); box-shadow: 0px 0px 0px var(--color-black); }
 
 .neo-btn-secondary {
-  background: var(--yellow);
-  color: var(--black);
+  background: var(--color-yellow);
+  color: var(--color-black);
 }
 
 .neo-btn-outline {
-  background: var(--white);
-  color: var(--black);
+  background: var(--color-white);
+  color: var(--color-black);
 }
 
-/* Chip */
 .neo-chip {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 4px 12px;
-  border: 2px solid var(--black);
+  border: 2px solid var(--color-black);
   border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-hard-sm);
   font-family: var(--font-headline);
   font-weight: 700; font-size: 10px;
   text-transform: uppercase; letter-spacing: 0.04em;
 }
 
-/* Card */
 .neo-card {
-  background: var(--white);
-  border: var(--border) solid var(--black);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  background: var(--color-white);
+  border: 2.5px solid var(--color-black);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-hard);
 }
