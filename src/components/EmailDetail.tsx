@@ -2,16 +2,19 @@ import type { Email } from '../data/types';
 
 interface EmailDetailProps {
   email: Email;
+  onBack?: () => void;
 }
 
-export default function EmailDetail({ email }: EmailDetailProps) {
+export default function EmailDetail({ email, onBack }: EmailDetailProps) {
   return (
     <div className="flex flex-col h-full bg-[#FAF6F0]">
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-4 py-3 border-b-[2.5px] border-black bg-white">
-        <button className="p-2 rounded-xl border-2 border-black bg-white shadow-sm hover:shadow active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
-          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-        </button>
+        {onBack && (
+          <button onClick={onBack} className="p-2 rounded-xl border-2 border-black bg-white shadow-sm hover:shadow active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
+            <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          </button>
+        )}
         <button className="p-2 rounded-xl border-2 border-black bg-white shadow-sm hover:shadow active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
           <span className="material-symbols-outlined text-[18px]">archive</span>
         </button>

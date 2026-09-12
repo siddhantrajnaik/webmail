@@ -4,9 +4,10 @@ interface SidebarProps {
   folders: { id: Folder; label: string; icon: string; count: number }[];
   active: Folder;
   onSelect: (f: Folder) => void;
+  onLogout: () => void;
 }
 
-export default function Sidebar({ folders, active, onSelect }: SidebarProps) {
+export default function Sidebar({ folders, active, onSelect, onLogout }: SidebarProps) {
   return (
     <aside className="flex flex-col h-full bg-white border-r-[2.5px] border-black shadow">
       {/* Logo */}
@@ -62,7 +63,7 @@ export default function Sidebar({ folders, active, onSelect }: SidebarProps) {
 
       {/* User */}
       <div className="p-3 border-t-[2.5px] border-black">
-        <div className="flex items-center gap-2.5 px-2">
+        <div className="flex items-center gap-2.5 px-2 mb-2">
           <div className="w-8 h-8 rounded-full bg-white border-2 border-black shadow-sm overflow-hidden flex items-center justify-center">
             <span className="font-headline text-xs font-bold">SK</span>
           </div>
@@ -70,8 +71,8 @@ export default function Sidebar({ folders, active, onSelect }: SidebarProps) {
             <p className="font-headline text-[12px] font-bold truncate">Siddhant K.</p>
             <p className="font-code text-[10px] text-[#52525B] truncate">@siddhant</p>
           </div>
-          <button className="p-1 rounded-lg hover:bg-[#f0edf1]">
-            <span className="material-symbols-outlined text-[18px]">settings</span>
+          <button onClick={onLogout} className="p-1.5 rounded-lg hover:bg-[#f0edf1] border-2 border-transparent hover:border-black transition-all" title="Logout">
+            <span className="material-symbols-outlined text-[18px]">logout</span>
           </button>
         </div>
       </div>
