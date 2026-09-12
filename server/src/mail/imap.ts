@@ -43,11 +43,11 @@ export class MailClient {
     return mbs.map((mb: any) => mb.path);
   }
 
-  async fetchMessages(limit = 50): Promise<any[]> {
+  async fetchMessages(folder = 'INBOX', limit = 50): Promise<any[]> {
     if (!this.client) throw new Error('Not connected');
-    await this.client.mailboxOpen('INBOX', { readOnly: true });
+    await this.client.mailboxOpen(folder, { readOnly: true });
     try {
-      const status = await this.client.status('INBOX', { messages: true });
+      const status = await this.client.status(folder, { messages: true });
       const count = status.messages ?? 0;
       const seqStart = Math.max(1, count - limit + 1);
       const mails: any[] = [];

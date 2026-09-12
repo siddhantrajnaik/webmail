@@ -97,8 +97,9 @@ app.get('/api/folders', async (req, res) => {
 app.get('/api/emails', async (req, res) => {
   try {
     const client = getClient(req);
+    const folder = (req.query.folder as string) || 'INBOX';
     const limit = parseInt((req.query.limit as string) || '50');
-    const mails = await client.fetchMessages(limit);
+    const mails = await client.fetchMessages(folder, limit);
     res.json({ emails: mails });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
