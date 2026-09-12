@@ -1,0 +1,9 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "webmail-render",
+      "url": "https://webmail-1.onrender.com"
+    }
+  ]
+}
