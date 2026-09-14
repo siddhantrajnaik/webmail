@@ -4,12 +4,13 @@ interface SidebarProps {
   folders: { id: Folder; label: string; icon: string; count: number }[];
   active: Folder;
   user: string;
+  address: string;
   onSelect: (f: Folder) => void;
   onLogout: () => void;
 }
 
-export default function Sidebar({ folders, active, user, onSelect, onLogout }: SidebarProps) {
-  const initials = (user || '?').slice(0, 2).toUpperCase();
+export default function Sidebar({ folders, active, user, address, onSelect, onLogout }: SidebarProps) {
+  const initials = (user || '?').replace(/@.*/, '').slice(0, 2).toUpperCase();
   return (
     <aside className="flex flex-col h-full w-full bg-white border-r-[2.5px] border-black shadow">
       {/* Logo */}
@@ -70,8 +71,8 @@ export default function Sidebar({ folders, active, user, onSelect, onLogout }: S
             <span className="font-headline text-xs font-bold">{initials}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-headline text-[12px] font-bold truncate">{user || 'Signed in'}</p>
-            <p className="font-code text-[10px] text-[#52525B] truncate">{user ? `${user}@iitd.ac.in` : ''}</p>
+            <p className="font-headline text-[12px] font-bold truncate">{user.replace(/@.*/, '') || 'Signed in'}</p>
+            <p className="font-code text-[10px] text-[#52525B] truncate" title={address}>{address}</p>
           </div>
           <button onClick={onLogout} className="p-1.5 rounded-lg hover:bg-[#f0edf1] border-2 border-transparent hover:border-black transition-all" title="Logout">
             <span className="material-symbols-outlined text-[18px]">logout</span>

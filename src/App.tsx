@@ -32,6 +32,7 @@ export default function App() {
   const [emails, setEmails] = useState<Email[]>([]);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState('');
+  const [address, setAddress] = useState('');
   const [query, setQuery] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -94,6 +95,7 @@ export default function App() {
         if (data.authenticated) {
           setAuthenticated(true);
           setUser(data.user || '');
+          setAddress(data.address || '');
           fetchEmails('inbox');
         }
         setChecking(false);
@@ -112,6 +114,7 @@ export default function App() {
     setEmails([]);
     setSelectedId(null);
     setUser('');
+    setAddress('');
   };
 
   if (checking) {
@@ -126,7 +129,7 @@ export default function App() {
   }
 
   if (!authenticated) {
-    return <Login onLogin={(u) => { setAuthenticated(true); setUser(u); fetchEmails('inbox'); }} />;
+    return <Login onLogin={(u, addr) => { setAuthenticated(true); setUser(u); setAddress(addr); fetchEmails('inbox'); }} />;
   }
 
   return (
@@ -144,6 +147,7 @@ export default function App() {
           }))}
           active={activeFolder}
           user={user}
+          address={address}
           onSelect={(id) => { setActiveFolder(id); setSelectedId(null); setSidebarOpen(false); }}
           onLogout={handleLogout}
         />

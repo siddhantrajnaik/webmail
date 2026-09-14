@@ -17,6 +17,18 @@ const passwords = new Map<string, string>();
 
 const corsOrigin = process.env.CORS_ORIGIN || true;
 
+// Departmental mailboxes live on subdomains (e.g. bioschool.iitd.ac.in), so a
+// hardcoded @iitd.ac.in locks those users out. A bare kerberos ID is tried
+// against each domain in turn; a full address is used exactly as typed.
+const MAIL_DOMAINS = (process.env.MAIL_DOMAINS || 'iitd.ac.in,bioschool.iitd.ac.in')
+  .split(',').map(d => d.trim()).filter(Boolean);
+
+const candidateAddresses = (username: string) =>
+  username.includes('@') ? [username] : MAIL_DOMAINS.map(d => `${username}@${d}`);
+
+// Resolved address per user, so SMTP sends from the domain that actually authenticated.
+const addresses = new Map<string, string>();
+
 app.use(cors({ origin: corsOrigin, credentials: true }));
 app.use(express.json());
 
@@ -40,20 +52,34 @@ app.use('/api', async (req, res, next) => {
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password required' });
     }
-    try {
-      const client = new MailClient({
-        user: `${username}@iitd.ac.in`,
-        password,
-      });
-      await client.connect();
-      (req.session as any).user = username;
-      (req.session as any).connected = true;
-      connections.set(username, client);
-      passwords.set(username, password);
-      res.json({ success: true, user: username });
-    } catch (err: any) {
-      res.status(401).json({ error: `Authentication failed: ${err.message}` });
+    // Try each candidate domain; the first that authenticates wins.
+    let client: MailClient | null = null;
+    let address = '';
+    let lastErr: any = null;
+    for (const candidate of candidateAddresses(username)) {
+      const attempt = new MailClient({ user: candidate, password });
+      try {
+        await attempt.connect();
+        client = attempt;
+        address = candidate;
+        break;
+      } catch (err: any) {
+        lastErr = err;
+        await attempt.disconnect().catch(() => {});
+      }
     }
+
+    if (!client) {
+      return res.status(401).json({ error: `Authentication failed: ${lastErr?.message ?? 'unknown error'}` });
+    }
+
+    (req.session as any).user = username;
+    (req.session as any).address = address;
+    (req.session as any).connected = true;
+    connections.set(username, client);
+    passwords.set(username, password);
+    addresses.set(username, address);
+    res.json({ success: true, user: username, address });
     return;
   }
   if (req.method === 'POST' && req.path === '/logout') {
@@ -63,15 +89,18 @@ app.use('/api', async (req, res, next) => {
       await client.disconnect().catch(() => {});
       connections.delete(username);
       passwords.delete(username);
+      addresses.delete(username);
     }
     req.session.destroy(() => {});
     res.json({ success: true });
     return;
   }
   if (req.method === 'GET' && req.path === '/status') {
+    const u = (req.session as any).user ?? null;
     res.json({
       authenticated: !!(req.session as any).connected,
-      user: (req.session as any).user ?? null,
+      user: u,
+      address: (req.session as any).address ?? null,
     });
     return;
   }
@@ -122,9 +151,10 @@ app.post('/api/send', async (req, res) => {
     const password = passwords.get(username);
     if (!password) return res.status(401).json({ error: 'Session expired' });
 
-    const transporter = createSmtpTransporter({ user: `${username}@iitd.ac.in`, password });
+    const from = (req.session as any).address || addresses.get(username) || username;
+    const transporter = createSmtpTransporter({ user: from, password });
     await transporter.sendMail({
-      from: `${username}@iitd.ac.in`,
+      from,
       to,
       subject,
       text: body,
