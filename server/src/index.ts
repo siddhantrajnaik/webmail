@@ -23,8 +23,13 @@ const corsOrigin = process.env.CORS_ORIGIN || true;
 const MAIL_DOMAINS = (process.env.MAIL_DOMAINS || 'iitd.ac.in,bioschool.iitd.ac.in')
   .split(',').map(d => d.trim()).filter(Boolean);
 
+// Dovecot here accepts any domain but resolves each to its own namespace, so a
+// domain-qualified login can land in an empty mailbox. The bare kerberos ID is
+// the canonical username, so try it first and fall back to the domains.
 const candidateAddresses = (username: string) =>
-  username.includes('@') ? [username] : MAIL_DOMAINS.map(d => `${username}@${d}`);
+  username.includes('@')
+    ? [username]
+    : [username, ...MAIL_DOMAINS.map(d => `${username}@${d}`)];
 
 // Resolved address per user, so SMTP sends from the domain that actually authenticated.
 const addresses = new Map<string, string>();
@@ -52,26 +57,50 @@ app.use('/api', async (req, res, next) => {
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password required' });
     }
-    // Try each candidate domain; the first that authenticates wins.
+    // Several candidates may authenticate while only one holds the real mail,
+    // so prefer the first with a non-empty INBOX; keep the first that merely
+    // authenticated as a fallback.
     let client: MailClient | null = null;
     let address = '';
+    let fallback: MailClient | null = null;
+    let fallbackAddress = '';
     let lastErr: any = null;
+
     for (const candidate of candidateAddresses(username)) {
       const attempt = new MailClient({ user: candidate, password });
       try {
         await attempt.connect();
-        client = attempt;
-        address = candidate;
-        break;
+        const count = await attempt.messageCount('INBOX').catch(() => 0);
+        console.log(`[login] ${candidate}: authenticated, INBOX=${count}`);
+        if (count > 0) {
+          client = attempt;
+          address = candidate;
+          break;
+        }
+        if (!fallback) {
+          fallback = attempt;
+          fallbackAddress = candidate;
+        } else {
+          await attempt.disconnect().catch(() => {});
+        }
       } catch (err: any) {
         lastErr = err;
+        console.log(`[login] ${candidate}: failed - ${err.message}`);
         await attempt.disconnect().catch(() => {});
       }
+    }
+
+    if (!client && fallback) {
+      client = fallback;
+      address = fallbackAddress;
+    } else if (fallback && fallback !== client) {
+      await fallback.disconnect().catch(() => {});
     }
 
     if (!client) {
       return res.status(401).json({ error: `Authentication failed: ${lastErr?.message ?? 'unknown error'}` });
     }
+    console.log(`[login] using ${address}`);
 
     (req.session as any).user = username;
     (req.session as any).address = address;

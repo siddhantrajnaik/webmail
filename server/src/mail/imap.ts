@@ -43,6 +43,18 @@ export class MailClient {
     }
   }
 
+  // Number of messages in a folder, used to tell a real mailbox from an empty
+  // namespace that the server happily authenticated us into.
+  async messageCount(folder = 'INBOX'): Promise<number> {
+    if (!this.client) throw new Error('Not connected');
+    const lock = await this.client.getMailboxLock(folder, { readOnly: true });
+    try {
+      return this.client.mailbox?.exists ?? 0;
+    } finally {
+      lock.release();
+    }
+  }
+
   async listMailboxes(): Promise<string[]> {
     if (!this.client) throw new Error('Not connected');
     const mbs = await this.client.list();
@@ -55,6 +67,7 @@ export class MailClient {
     const lock = await this.client.getMailboxLock(folder, { readOnly: true });
     try {
       const count = this.client.mailbox?.exists ?? 0;
+      console.log(`[fetch] ${folder}: exists=${count}`);
       if (count === 0) return [];
       const seqStart = Math.max(1, count - limit + 1);
       const mails: any[] = [];
@@ -73,6 +86,7 @@ export class MailClient {
           flags: Array.from(msg.flags ?? []),
         });
       }
+      console.log(`[fetch] ${folder}: returned=${mails.length}`);
       return mails.reverse(); // newest first
     } finally {
       lock.release();
