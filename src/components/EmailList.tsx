@@ -9,6 +9,7 @@ interface EmailListProps {
   title: string;
   query: string;
   onQueryChange: (q: string) => void;
+  error?: string;
   onOpenMenu: () => void;
 }
 
@@ -27,7 +28,7 @@ function fmtTime(d: Date): string {
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
-export default function EmailList({ emails, activeId, onSelect, loading, title, query, onQueryChange, onOpenMenu }: EmailListProps) {
+export default function EmailList({ emails, activeId, onSelect, loading, title, query, onQueryChange, error, onOpenMenu }: EmailListProps) {
   const unread = emails.filter(e => !e.read).length;
   return (
     <div className="flex flex-col h-full bg-[#FAF6F0]">
@@ -65,6 +66,11 @@ export default function EmailList({ emails, activeId, onSelect, loading, title, 
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <span className="material-symbols-outlined text-[32px] text-[#dcd9dd] animate-spin">progress_activity</span>
+          </div>
+        ) : error ? (
+          <div className="m-4 bg-red-50 border-2 border-red-400 rounded-xl p-3 flex gap-2">
+            <span className="material-symbols-outlined text-[18px] text-red-700 shrink-0">error</span>
+            <p className="font-body text-[13px] text-red-700 font-medium">{error}</p>
           </div>
         ) : emails.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-6 text-center">

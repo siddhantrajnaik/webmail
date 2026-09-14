@@ -34,6 +34,7 @@ export default function App() {
   const [user, setUser] = useState('');
   const [address, setAddress] = useState('');
   const [query, setQuery] = useState('');
+  const [error, setError] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const apiFolder = useCallback((f: Folder) => f === 'inbox' ? 'INBOX' : f.toUpperCase(), []);
@@ -42,9 +43,22 @@ export default function App() {
 
   const fetchEmails = useCallback(async (folder: Folder) => {
     setLoading(true);
+    setError('');
     try {
       const res = await fetch(api(`/api/emails?folder=${apiFolder(folder)}`), { credentials: 'include' });
       const data = await res.json();
+      // A dead session must not masquerade as an empty inbox.
+      if (res.status === 401) {
+        setAuthenticated(false);
+        setEmails([]);
+        setError('Your session expired. Please sign in again.');
+        return;
+      }
+      if (!res.ok) {
+        setError(data.error || 'Could not load mail.');
+        setEmails([]);
+        return;
+      }
       if (res.ok) {
         const mapped = (data.emails || []).map((m: any) => ({
           id: String(m.uid),
@@ -63,6 +77,7 @@ export default function App() {
       }
     } catch (err) {
       console.error('fetch error:', err);
+      setError('Could not reach the mail server.');
     } finally {
       setLoading(false);
     }
@@ -173,6 +188,7 @@ export default function App() {
           title={FOLDER_LIST.find(f => f.id === activeFolder)?.label ?? 'Inbox'}
           query={query}
           onQueryChange={setQuery}
+          error={error}
           onOpenMenu={() => setSidebarOpen(true)}
         />
       </div>

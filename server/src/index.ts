@@ -125,11 +125,18 @@ app.use('/api', async (req, res, next) => {
     return;
   }
   if (req.method === 'GET' && req.path === '/status') {
+    // The session cookie outlives the process, but `connections` does not. A
+    // cookie alone is not a usable session: report it honestly so the client
+    // shows the login form instead of an inbox that can never load.
     const u = (req.session as any).user ?? null;
+    const live = !!(req.session as any).connected && !!u && connections.has(u);
+    if ((req.session as any).connected && !live) {
+      console.log(`[status] session for ${u} has no live connection (restart?); re-login required`);
+    }
     res.json({
-      authenticated: !!(req.session as any).connected,
-      user: u,
-      address: (req.session as any).address ?? null,
+      authenticated: live,
+      user: live ? u : null,
+      address: live ? (req.session as any).address ?? null : null,
     });
     return;
   }
