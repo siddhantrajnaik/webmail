@@ -36,7 +36,7 @@ export default function App() {
         const mapped = (data.emails || []).map((m: any) => ({
           id: String(m.uid),
           from: m.from,
-          fromEmail: m.from,
+          fromEmail: m.fromEmail || m.from,
           subject: m.subject || '(no subject)',
           body: m.text || '',
           timestamp: m.date ? new Date(m.date) : new Date(),

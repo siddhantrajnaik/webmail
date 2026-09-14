@@ -31,6 +31,11 @@ export class MailClient {
     await this.client.connect();
   }
 
+  // IMAP servers drop idle connections; reconnect instead of failing the request.
+  async ensureConnected() {
+    if (!this.client?.usable) await this.connect();
+  }
+
   async disconnect() {
     if (this.client) {
       try { await this.client.logout(); } catch {}
@@ -46,14 +51,15 @@ export class MailClient {
 
   async fetchMessages(folder = 'INBOX', limit = 50): Promise<any[]> {
     if (!this.client) throw new Error('Not connected');
-    await this.client.mailboxOpen(folder, { readOnly: true });
+    // Lock rather than open/close: one client serves concurrent requests.
+    const lock = await this.client.getMailboxLock(folder, { readOnly: true });
     try {
-      const status = await this.client.status(folder, { messages: true });
-      const count = status.messages ?? 0;
+      const count = this.client.mailbox?.exists ?? 0;
       if (count === 0) return [];
       const seqStart = Math.max(1, count - limit + 1);
       const mails: any[] = [];
-      for await (const msg of this.client.fetch(`${seqStart}:${count}`, { envelope: true, flags: true }, { uid: true })) {
+      // No `uid` option: the range is sequence numbers, not UIDs.
+      for await (const msg of this.client.fetch(`${seqStart}:${count}`, { uid: true, envelope: true, flags: true })) {
         const env = msg.envelope;
         if (!env) continue;
         const fromArr = env.from as Array<{ address?: string; name?: string }> | undefined;
@@ -67,31 +73,71 @@ export class MailClient {
           flags: Array.from(msg.flags ?? []),
         });
       }
-      return mails;
+      return mails.reverse(); // newest first
     } finally {
-      await this.client.mailboxClose();
+      lock.release();
     }
   }
 
   async fetchMessageBody(folder: string, uid: number): Promise<string> {
     if (!this.client) throw new Error('Not connected');
-    await this.client.mailboxOpen(folder, { readOnly: true });
+    const lock = await this.client.getMailboxLock(folder, { readOnly: true });
     try {
-      const msg = await this.client.fetchOne(uid, { bodyParts: ['1'] }, { uid: true, source: true });
-      const text = msg.source?.toString('utf-8');
-      // Strip headers to get plain text body
-      if (text) {
-        const lines = text.split('\n');
-        const bodyStart = lines.findIndex((l: string) => l.trim() === '');
-        if (bodyStart >= 0) {
-          return lines.slice(bodyStart + 1).join('\n').trim();
-        }
-      }
-      return text || '';
+      const msg = await this.client.fetchOne(String(uid), { bodyStructure: true }, { uid: true });
+      if (!msg) return '';
+      const part = findTextPart(msg.bodyStructure);
+      // download() decodes transfer-encoding and converts charset to UTF-8.
+      const dl = await this.client.download(String(uid), part.id, { uid: true });
+      if (!dl?.content) return '';
+      const chunks: Buffer[] = [];
+      for await (const chunk of dl.content) chunks.push(chunk as Buffer);
+      const text = Buffer.concat(chunks).toString('utf-8').trim();
+      return part.isHtml ? htmlToText(text) : text;
     } finally {
-      await this.client.mailboxClose();
+      lock.release();
     }
   }
+}
+
+// Pick the part to show: plain text if the message has one, else HTML.
+function findTextPart(node: any): { id: string; isHtml: boolean } {
+  const fallback = { id: '1', isHtml: false };
+  if (!node) return fallback;
+
+  const flat: any[] = [];
+  const walk = (n: any) => {
+    if (!n) return;
+    flat.push(n);
+    (n.childNodes ?? []).forEach(walk);
+  };
+  walk(node);
+
+  const pick = (type: string) =>
+    flat.find(n => n.type === type && n.disposition !== 'attachment');
+
+  const plain = pick('text/plain');
+  if (plain) return { id: plain.part || '1', isHtml: false };
+
+  const html = pick('text/html');
+  if (html) return { id: html.part || '1', isHtml: true };
+
+  return fallback;
+}
+
+function htmlToText(html: string): string {
+  return html
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|tr|h[1-6]|li)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 export function createSmtpTransporter(creds: ImapCredentials) {
