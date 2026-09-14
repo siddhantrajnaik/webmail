@@ -69,7 +69,10 @@ app.use('/api', async (req, res, next) => {
     return;
   }
   if (req.method === 'GET' && req.path === '/status') {
-    res.json({ authenticated: !!(req.session as any).connected });
+    res.json({
+      authenticated: !!(req.session as any).connected,
+      user: (req.session as any).user ?? null,
+    });
     return;
   }
   next();

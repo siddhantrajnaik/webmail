@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Email } from '../data/types';
+import { initialsOf } from '../data/format';
 
 interface EmailDetailProps {
   email: Email;
@@ -25,7 +26,7 @@ export default function EmailDetail({ email, onBack }: EmailDetailProps) {
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-4 py-3 border-b-[2.5px] border-black bg-white">
         {onBack && (
-          <button onClick={onBack} className="p-2 rounded-xl border-2 border-black bg-white shadow-sm hover:shadow active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
+          <button onClick={onBack} aria-label="Back to list" className="md:hidden p-2 rounded-xl border-2 border-black bg-white shadow-sm hover:shadow active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
             <span className="material-symbols-outlined text-[18px]">arrow_back</span>
           </button>
         )}
@@ -50,22 +51,20 @@ export default function EmailDetail({ email, onBack }: EmailDetailProps) {
             style={{ backgroundColor: getCategoryColor(email.category) }}
           >
             <span className="font-headline text-sm font-extrabold text-white">
-              {email.from.split(' ').map(w => w[0]).slice(0, 2).join('')}
+              {initialsOf(email.from)}
             </span>
           </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <span className="font-headline text-[13px] font-bold">{email.from}</span>
-              <span className="font-code text-[10px] text-[#52525B]">&lt;{email.fromEmail}&gt;</span>
-            </div>
-            <span className="font-code text-[11px] text-[#52525B]">
+          <div className="flex-1 min-w-0">
+            <p className="font-headline text-[13px] font-bold truncate">{email.from}</p>
+            <p className="font-code text-[10px] text-[#52525B] truncate">{email.fromEmail}</p>
+            <p className="font-code text-[11px] text-[#52525B] mt-0.5">
               {email.timestamp.toLocaleString('en-IN', {
                 weekday: 'long', month: 'short', day: 'numeric',
                 hour: '2-digit', minute: '2-digit'
               })}
-            </span>
+            </p>
           </div>
-          <button className="p-2 rounded-xl border-2 border-black bg-white shadow-sm">
+          <button aria-label={email.starred ? 'Unstar' : 'Star'} className="shrink-0 p-2 rounded-xl border-2 border-black bg-white shadow-sm">
             <span className="material-symbols-outlined text-[18px]">{email.starred ? 'star' : 'star_border'}</span>
           </button>
         </div>
@@ -86,9 +85,11 @@ export default function EmailDetail({ email, onBack }: EmailDetailProps) {
             <span className="material-symbols-outlined text-[32px] text-[#dcd9dd] animate-spin">progress_activity</span>
           </div>
         ) : (
-          body.split('\n').map((line, i) => (
-            <p key={i} className="font-body text-[14px] leading-[22px] text-[#1b1b1e] whitespace-pre-line mb-1">{line}</p>
-          ))
+          // One pre-wrap block: blank lines already separate paragraphs, and
+          // splitting per line produced empty <p>s with uneven spacing.
+          <div className="font-body text-[14px] leading-[22px] text-[#1b1b1e] whitespace-pre-wrap break-words">
+            {body}
+          </div>
         )}
 
         {/* Attachment */}

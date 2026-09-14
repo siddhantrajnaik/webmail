@@ -3,13 +3,15 @@ import type { Folder } from '../data/types';
 interface SidebarProps {
   folders: { id: Folder; label: string; icon: string; count: number }[];
   active: Folder;
+  user: string;
   onSelect: (f: Folder) => void;
   onLogout: () => void;
 }
 
-export default function Sidebar({ folders, active, onSelect, onLogout }: SidebarProps) {
+export default function Sidebar({ folders, active, user, onSelect, onLogout }: SidebarProps) {
+  const initials = (user || '?').slice(0, 2).toUpperCase();
   return (
-    <aside className="flex flex-col h-full bg-white border-r-[2.5px] border-black shadow">
+    <aside className="flex flex-col h-full w-full bg-white border-r-[2.5px] border-black shadow">
       {/* Logo */}
       <div className="p-4 border-b-[2.5px] border-black">
         <div className="flex items-center gap-2.5">
@@ -64,12 +66,12 @@ export default function Sidebar({ folders, active, onSelect, onLogout }: Sidebar
       {/* User */}
       <div className="p-3 border-t-[2.5px] border-black">
         <div className="flex items-center gap-2.5 px-2 mb-2">
-          <div className="w-8 h-8 rounded-full bg-white border-2 border-black shadow-sm overflow-hidden flex items-center justify-center">
-            <span className="font-headline text-xs font-bold">SK</span>
+          <div className="w-8 h-8 shrink-0 rounded-full bg-white border-2 border-black shadow-sm overflow-hidden flex items-center justify-center">
+            <span className="font-headline text-xs font-bold">{initials}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-headline text-[12px] font-bold truncate">Siddhant K.</p>
-            <p className="font-code text-[10px] text-[#52525B] truncate">@siddhant</p>
+            <p className="font-headline text-[12px] font-bold truncate">{user || 'Signed in'}</p>
+            <p className="font-code text-[10px] text-[#52525B] truncate">{user ? `${user}@iitd.ac.in` : ''}</p>
           </div>
           <button onClick={onLogout} className="p-1.5 rounded-lg hover:bg-[#f0edf1] border-2 border-transparent hover:border-black transition-all" title="Logout">
             <span className="material-symbols-outlined text-[18px]">logout</span>

@@ -3,7 +3,7 @@ import { useState } from 'react';
 const api = (path: string) => path;
 
 interface LoginProps {
-  onLogin: () => void;
+  onLogin: (user: string) => void;
 }
 
 export default function Login({ onLogin }: LoginProps) {
@@ -27,7 +27,7 @@ export default function Login({ onLogin }: LoginProps) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Login failed');
-      onLogin();
+      onLogin(data.user || username);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -81,6 +81,10 @@ export default function Login({ onLogin }: LoginProps) {
                   type="text"
                   className="neo-input"
                   placeholder="your_kerberos_id"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   required
                   autoFocus
                 />
@@ -95,6 +99,7 @@ export default function Login({ onLogin }: LoginProps) {
                   type="password"
                   className="neo-input"
                   placeholder="••••••••"
+                  autoComplete="current-password"
                   required
                 />
               </div>
